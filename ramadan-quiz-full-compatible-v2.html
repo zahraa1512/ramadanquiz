@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>مسابقة رمضان</title>
+<style>
+:root{--bg1:#064e3b;--bg2:#0f766e;--gold:#fbbf24;--card:rgba(255,255,255,.95);}
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));min-height:100vh;display:flex;align-items:center;justify-content:center}
+.stars{position:fixed;inset:0;pointer-events:none;opacity:.25;background-image:radial-gradient(#fff 1px,transparent 1px);background-size:180px 180px}
+.card{width:min(980px,94vw);background:var(--card);border-radius:22px;box-shadow:0 14px 40px rgba(0,0,0,.35);padding:16px}
+h1{margin:6px 0 2px;text-align:center;color:#064e3b}
+.sub{text-align:center;color:#64748b;font-size:14px;margin-bottom:10px}
+.grid{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:820px){.grid{grid-template-columns:1.2fr .8fr}}
+.panel{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center}
+.btn{border:none;border-radius:12px;padding:10px 14px;font-size:16px;cursor:pointer}
+.btn.level{background:var(--gold);color:#111827;font-weight:700}
+.btn.ghost{background:#e2e8f0;color:#111827}
+.btn.secondary{background:#93c5fd;color:#1e3a8a}
+.pill{background:rgba(251,191,36,.18);border:1px solid rgba(251,191,36,.35);color:#7c2d12;padding:6px 10px;border-radius:999px;font-size:12px}
+.screen{display:none} .screen.active{display:block}
+.timer{display:flex;gap:10px;align-items:center;justify-content:space-between;color:#0f172a;margin:6px 0 10px}
+.bar{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;flex:1}
+.bar>div{height:100%;width:100%;background:var(--gold);transition:width .25s linear}
+.q{font-size:20px;font-weight:800;color:#064e3b;margin:6px 0 10px}
+.opts{display:grid;gap:10px}
+.opt{background:#d1fae5;color:#064e3b;border:none;border-radius:14px;padding:12px;font-size:16px;text-align:right;cursor:pointer}
+.opt:hover{background:#a7f3d0}
+.opt.correct{outline:4px solid rgba(34,197,94,.45)}
+.opt.wrong{outline:4px solid rgba(239,68,68,.45);background:#fee2e2}
+.note{min-height:22px;color:#334155;font-size:14px;margin-top:8px}
+.small{font-size:12px;color:#64748b}
+.footerRow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+input[type=range]{accent-color:#60a5fa}
+#confetti{position:fixed;inset:0;pointer-events:none;display:none}
+</style>
+</head>
+<body>
+<div class="stars"></div>
+<canvas id="confetti"></canvas>
+
+<div class="card">
+  <h1>🌙✨ مسابقة رمضان ✨🌙</h1>
+  <div class="sub">مستويات + وقت + أفضل النتائج + أسئلة جديدة — تعمل أوفلاين على الهاتف</div>
+  <div class="row" style="margin-bottom:10px">
+    <span class="pill" id="pillLevel">المستوى: —</span>
+    <span class="pill" id="pillQ">السؤال: —</span>
+    <span class="pill" id="pillScore">النتيجة: 0</span>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div id="screenLevel" class="screen active">
+        <div class="q" style="text-align:center">اختر المستوى</div>
+        <div class="row">
+          <button class="btn level" id="btnEasy">سهل</button>
+          <button class="btn level" id="btnMed">متوسط</button>
+          <button class="btn level" id="btnHard">صعب</button>
+        </div>
+        <p class="small" style="text-align:center;margin-top:10px">
+          لكل سؤال: 15 ثانية ⏳ — عند النهاية اضغط “أسئلة جديدة” 🔁
+        </p>
+      </div>
+
+      <div id="screenQuiz" class="screen">
+        <div class="timer">
+          <div><b>⏳</b> <span id="time">15</span> ث</div>
+          <div class="bar"><div id="timeBar"></div></div>
+          <div><b>📌</b> <span id="progress">1</span>/20</div>
+        </div>
+        <div class="q" id="question">...</div>
+        <div class="opts" id="options"></div>
+        <div class="note" id="note"></div>
+        <div class="footerRow">
+          <button class="btn ghost" id="btnSkip">تخطي</button>
+          <button class="btn secondary" id="btnRestart">إعادة من البداية</button>
+        </div>
+      </div>
+
+      <div id="screenResult" class="screen">
+        <div style="text-align:center;font-size:56px">🎉</div>
+        <div class="q" style="text-align:center" id="finalTitle">انتهت المسابقة!</div>
+        <div style="text-align:center;font-size:18px;color:#0f172a">
+          نتيجتك: <b id="finalScore">0</b> / 20
+        </div>
+        <div class="footerRow">
+          <button class="btn level" id="btnNewQ">🔁 أسئلة جديدة</button>
+          <button class="btn secondary" id="btnBack">⬅️ تغيير المستوى</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:0">🏆 أفضل النتائج</h3>
+        <span class="small">تُحفظ على نفس الهاتف</span>
+      </div>
+      <ol id="lbList" style="margin-top:8px"></ol>
+
+      <div class="footerRow">
+        <button class="btn ghost" id="btnClearScores">مسح النتائج</button>
+        <button class="btn ghost" id="btnTest">اختبار أصوات</button>
+        <button class="btn ghost" id="btnMusic">🎵 موسيقى</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="pill" style="background:rgba(96,165,250,.18);border-color:rgba(96,165,250,.35);color:#1e3a8a">
+          صوت الموسيقى
+          <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.22" style="vertical-align:middle;width:140px">
+        </span>
+      </div>
+      <p class="small" style="margin-top:8px">
+        ملاحظة: بعض الهواتف لا تسمح بالصوت إلا بعد أول لمسة (زر الموسيقى يكفي).
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ========= Data =========
+  const POOL = {"easy": [{"q": "في أي شهر نصوم؟", "opts": ["رمضان", "محرم", "رجب", "شعبان"], "a": "رمضان"}, {"q": "متى يكون الإفطار؟", "opts": ["عند المغرب", "عند الفجر", "بعد الظهر", "قبل السحور"], "a": "عند المغرب"}, {"q": "ما اسم الوجبة قبل الفجر؟", "opts": ["السحور", "الإفطار", "الغداء", "العشاء"], "a": "السحور"}, {"q": "بعد رمضان يأتي أي عيد؟", "opts": ["عيد الفطر", "عيد الأضحى", "عاشوراء", "الأربعين"], "a": "عيد الفطر"}, {"q": "هل قراءة القرآن مستحبة في رمضان؟", "opts": ["نعم", "لا"], "a": "نعم"}, {"q": "هل الأكل عمداً يبطل الصيام؟", "opts": ["نعم", "لا"], "a": "نعم"}, {"q": "هل شرب الماء عمداً يبطل الصيام؟", "opts": ["نعم", "لا"], "a": "نعم"}, {"q": "الصدقة في رمضان؟", "opts": ["مستحبة", "مكروهة", "حرام", "لا قيمة لها"], "a": "مستحبة"}, {"q": "ليلة القدر تكون في أي شهر؟", "opts": ["رمضان", "صفر", "محرم", "جمادى"], "a": "رمضان"}, {"q": "ما الهدف من الصيام؟", "opts": ["التقوى", "اللعب", "السفر", "التجارة"], "a": "التقوى"}, {"q": "هل النوم وحده يبطل الصيام؟", "opts": ["لا", "نعم"], "a": "لا"}, {"q": "هل الدعاء في رمضان مستحب؟", "opts": ["نعم", "لا"], "a": "نعم"}, {"q": "زكاة الفطرة تُخرج قبل؟", "opts": ["صلاة العيد", "السحور", "ليلة القدر", "الظهر"], "a": "صلاة العيد"}, {"q": "هل الغيبة أمر حسن في رمضان؟", "opts": ["لا", "نعم"], "a": "لا"}, {"q": "هل ننوي الصيام قبل الفجر؟", "opts": ["نعم", "لا"], "a": "نعم"}, {"q": "ما اسم الوجبة عند المغرب؟", "opts": ["الإفطار", "السحور", "الفطور الصباحي", "العشاء"], "a": "الإفطار"}, {"q": "كم عدد الصلوات اليومية؟", "opts": ["5", "3", "7", "2"], "a": "5"}, {"q": "هل القرآن نزل في رمضان؟", "opts": ["نعم", "لا"], "a": "نعم"}, {"q": "هل مساعدة المحتاجين عمل محبوب؟", "opts": ["نعم", "لا"], "a": "نعم"}, {"q": "هل حفظ اللسان مطلوب في رمضان؟", "opts": ["نعم", "لا"], "a": "نعم"}], "medium": [{"q": "كم عدد الأئمة عند الشيعة الإمامية؟", "opts": ["12", "10", "14", "4"], "a": "12"}, {"q": "من هو الإمام الأول؟", "opts": ["الإمام علي (ع)", "الإمام الحسن (ع)", "الإمام الحسين (ع)", "الإمام الصادق (ع)"], "a": "الإمام علي (ع)"}, {"q": "من هو الإمام الثاني عشر؟", "opts": ["الإمام المهدي (عج)", "الإمام الرضا (ع)", "الإمام الكاظم (ع)", "الإمام الجواد (ع)"], "a": "الإمام المهدي (عج)"}, {"q": "أي إمام وُلد في 15 رمضان؟", "opts": ["الإمام الحسن (ع)", "الإمام الحسين (ع)", "الإمام السجاد (ع)", "الإمام الباقر (ع)"], "a": "الإمام الحسن (ع)"}, {"q": "في أي يوم ضُرب الإمام علي (ع)؟", "opts": ["19 رمضان", "21 رمضان", "15 شعبان", "10 محرم"], "a": "19 رمضان"}, {"q": "في أي يوم استشهد الإمام علي (ع)؟", "opts": ["21 رمضان", "19 رمضان", "23 رمضان", "1 شوال"], "a": "21 رمضان"}, {"q": "من قاتل الإمام علي (ع) بضربة الغدر؟", "opts": ["ابن ملجم", "يزيد", "شمر", "ابن سعد"], "a": "ابن ملجم"}, {"q": "أشهر ليالي القدر التي تُحيى عند الشيعة هي:", "opts": ["19 و21 و23", "27 فقط", "10 و11 و12", "1 و2 و3"], "a": "19 و21 و23"}, {"q": "أي سورة يكثر ذكرها في ليالي القدر؟", "opts": ["سورة القدر", "سورة الفيل", "سورة التكاثر", "سورة المسد"], "a": "سورة القدر"}, {"q": "إخراج زكاة الفطرة حكمه:", "opts": ["واجب", "مستحب", "مكروه", "مباح"], "a": "واجب"}, {"q": "أفضل الأعمال في ليلة القدر:", "opts": ["الدعاء والاستغفار", "النوم فقط", "الجدال", "إضاعة الوقت"], "a": "الدعاء والاستغفار"}, {"q": "من المناسبات المهمة في رمضان:", "opts": ["استشهاد الإمام علي (ع)", "عاشوراء", "الأربعين", "الغدير"], "a": "استشهاد الإمام علي (ع)"}, {"q": "الصوم الواجب في رمضان يكون على:", "opts": ["المكلّف القادر", "كل الأطفال", "فقط المسافر", "فقط الفقير"], "a": "المكلّف القادر"}, {"q": "الإفطار عمداً في رمضان بدون عذر:", "opts": ["ذنب كبير", "مباح", "مستحب", "لا شيء"], "a": "ذنب كبير"}, {"q": "يُستحب تعجيل الإفطار بعد:", "opts": ["تحقق الغروب", "منتصف الليل", "بعد العشاء", "بعد السحور"], "a": "تحقق الغروب"}, {"q": "من آداب رمضان:", "opts": ["حسن الخلق", "كثرة السب", "الاستهزاء", "قطع الرحم"], "a": "حسن الخلق"}, {"q": "قراءة القرآن في رمضان:", "opts": ["مستحبة جداً", "مكروهة", "حرام", "لا علاقة"], "a": "مستحبة جداً"}, {"q": "تعمد الأكل والشرب:", "opts": ["يبطل الصوم", "لا يؤثر", "يزيد الأجر", "يستحب"], "a": "يبطل الصوم"}, {"q": "من الأعمال المستحبة في رمضان:", "opts": ["الصدقة", "الغيبة", "الخصام", "إيذاء الناس"], "a": "الصدقة"}, {"q": "سُمّي رمضان بهذا الاسم لأنه:", "opts": ["يحرق الذنوب", "شهر تجارة", "شهر سفر", "شهر لعب"], "a": "يحرق الذنوب"}], "hard": [{"q": "تُعد ليلة القدر:", "opts": ["خير من ألف شهر", "مثل أي ليلة", "أقل من غيرها", "ليلة العيد فقط"], "a": "خير من ألف شهر"}, {"q": "من أشهر أعمال ليالي القدر:", "opts": ["الغُسل + الدعاء + القرآن", "السفر", "اللهو", "ترك الصلاة"], "a": "الغُسل + الدعاء + القرآن"}, {"q": "السهر للعبادة في ليالي القدر:", "opts": ["مستحب", "مكروه", "محرم", "لا معنى"], "a": "مستحب"}, {"q": "من معاني التقوى:", "opts": ["مراقبة الله وترك المعصية", "كثرة الأكل", "الغضب", "التكبر"], "a": "مراقبة الله وترك المعصية"}, {"q": "الأعمال التي تُنقص أجر الصائم:", "opts": ["الغيبة والنميمة", "الصدقة", "الصلاة", "قراءة القرآن"], "a": "الغيبة والنميمة"}, {"q": "من صفات المؤمن في رمضان:", "opts": ["الصبر", "التهور", "الظلم", "الإيذاء"], "a": "الصبر"}, {"q": "المداومة على القرآن في رمضان:", "opts": ["زيادة نور القلب", "تعب بلا فائدة", "حرام", "مكروه"], "a": "زيادة نور القلب"}, {"q": "من أفضل ما يُقال عند الإفطار:", "opts": ["دعاء وشكر الله", "سخرية", "سب", "جدال"], "a": "دعاء وشكر الله"}, {"q": "من ثمرات الصيام:", "opts": ["تقوية الإرادة", "زيادة المعاصي", "زيادة الظلم", "قطع الصلاة"], "a": "تقوية الإرادة"}, {"q": "صلة الرحم في رمضان:", "opts": ["مستحبة جداً", "مكروهة", "محرمة", "لا علاقة"], "a": "مستحبة جداً"}, {"q": "الصدقة في رمضان تُعد:", "opts": ["باباً للرحمة", "عملاً مكروهاً", "ذنباً", "بدعة"], "a": "باباً للرحمة"}, {"q": "الاستغفار في رمضان:", "opts": ["مستحب كثيراً", "غير مطلوب", "حرام", "مكروه"], "a": "مستحب كثيراً"}, {"q": "الإحسان للناس في رمضان:", "opts": ["يزيد الأجر", "ينقص الأجر", "لا فائدة", "حرام"], "a": "يزيد الأجر"}, {"q": "حفظ اللسان في رمضان يعني:", "opts": ["ترك السب والغيبة", "ترك الطعام", "ترك النوم", "ترك الدراسة"], "a": "ترك السب والغيبة"}, {"q": "التواضع في رمضان:", "opts": ["خلق مطلوب", "ضعف", "حرام", "مكروه"], "a": "خلق مطلوب"}, {"q": "من أفضل الليالي في السنة:", "opts": ["ليالي القدر", "كل الليالي سواء", "ليلة السفر", "ليلة العيد فقط"], "a": "ليالي القدر"}, {"q": "احترام رمضان يشمل:", "opts": ["ترك المحرمات والخصام", "الإسراف", "الأذى", "الغيبة"], "a": "ترك المحرمات والخصام"}, {"q": "صلاة الليل في رمضان:", "opts": ["مستحبة جداً", "واجبة على الجميع", "محرمة", "لا تُشرع"], "a": "مستحبة جداً"}, {"q": "من آداب السحور:", "opts": ["التبكير والنية", "ترك النية", "الأكل بلا حدود", "إيذاء الآخرين"], "a": "التبكير والنية"}, {"q": "من أعمال ليلة القدر:", "opts": ["الدعاء والاستغفار", "اللهو", "النوم فقط", "الخصام"], "a": "الدعاء والاستغفار"}]};
+  const Q_PER_ROUND = 20;
+  const SECONDS_PER_Q = 15;
+
+  // ========= State =========
+  let level = null;
+  let round = [];
+  let idx = 0;
+  let score = 0;
+  let locked = false;
+  let timerId = null;
+  let timeLeft = SECONDS_PER_Q;
+
+  // ========= Helpers =========
+  const $ = (id)=>document.getElementById(id);
+  function show(id){
+    ["screenLevel","screenQuiz","screenResult"].forEach(s=>$(s).classList.remove("active"));
+    $(id).classList.add("active");
+  }
+  function labelLevel(lv){ return lv==="easy"?"سهل":lv==="medium"?"متوسط":"صعب"; }
+  function shuffle(a){
+    const x=a.slice();
+    for(let i=x.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [x[i],x[j]]=[x[j],x[i]];
+    }
+    return x;
+  }
+  function updatePills(){
+    $("pillLevel").textContent = "المستوى: " + (level?labelLevel(level):"—");
+    $("pillQ").textContent = "السؤال: " + (level?`${Math.min(idx+1,Q_PER_ROUND)}/${Q_PER_ROUND}`:"—");
+    $("pillScore").textContent = "النتيجة: " + score;
+  }
+  function stopTimer(){ if(timerId){clearInterval(timerId);timerId=null;} }
+  function startTimer(){
+    stopTimer();
+    timeLeft = SECONDS_PER_Q;
+    $("time").textContent = timeLeft;
+    $("timeBar").style.width = "100%";
+    timerId = setInterval(()=>{
+      timeLeft--;
+      $("time").textContent = timeLeft;
+      $("timeBar").style.width = `${(timeLeft/SECONDS_PER_Q)*100}%`;
+      if(timeLeft<=0){
+        stopTimer();
+        locked = true;
+        $("note").textContent = "⏳ انتهى الوقت. الإجابة الصحيحة: " + round[idx].a;
+        setTimeout(next, 900);
+      }
+    }, 1000);
+  }
+
+  // ========= Sounds (safe) =========
+  function safeAudioCtx(){ return window.AudioContext || window.webkitAudioContext; }
+  function beep(kind){
+    try{
+      const AC = safeAudioCtx(); if(!AC) return;
+      const ctx = new AC();
+      const now = ctx.currentTime;
+
+      function tone(freq, dur, gain, type){
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = type||"triangle";
+        o.frequency.setValueAtTime(freq, now);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(gain, now+0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(now); o.stop(now+dur+0.02);
+      }
+
+      if(kind==="ok"){ tone(880,.18,.6,"triangle"); setTimeout(()=>tone(1175,.18,.6,"triangle"),120); }
+      else if(kind==="bad"){ tone(220,.28,.55,"sawtooth"); }
+      else if(kind==="win"){
+        // قوي لكن ثابت
+        tone(988,.22,.7,"triangle");
+        setTimeout(()=>tone(1319,.22,.65,"triangle"),120);
+        setTimeout(()=>tone(1568,.22,.6,"triangle"),240);
+      }
+    }catch(e){}
+  }
+  function testSounds(){ beep("ok"); setTimeout(()=>beep("bad"),450); }
+
+  // ========= Music (energetic + chill) =========
+  let musicCtx=null, musicGain=null, musicOn=false, musicTimer=null, step=0;
+  const NOTES = [392.00,440.00,493.88,587.33,523.25,493.88,440.00,392.00]; // G A B D C B A G
+  function ensureMusic(){
+    const AC = safeAudioCtx(); if(!AC) return false;
+    if(musicCtx) return true;
+    musicCtx = new AC();
+    musicGain = musicCtx.createGain();
+    musicGain.gain.value = parseFloat($("musicVol").value||"0.22");
+
+    const lp = musicCtx.createBiquadFilter();
+    lp.type="lowpass"; lp.frequency.value=1500;
+    musicGain.connect(lp);
+    lp.connect(musicCtx.destination);
+    return true;
+  }
+  function musicTick(){
+    if(!musicOn || !musicCtx) return;
+    const now = musicCtx.currentTime;
+    const freq = NOTES[step % NOTES.length];
+    step++;
+
+    // melody
+    const o = musicCtx.createOscillator();
+    const g = musicCtx.createGain();
+    o.type="sine";
+    o.frequency.setValueAtTime(freq, now);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.22, now+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
+    o.connect(g); g.connect(musicGain);
+    o.start(now); o.stop(now+0.36);
+
+    // beat click
+    const c = musicCtx.createOscillator();
+    const cg = musicCtx.createGain();
+    c.type="square";
+    c.frequency.setValueAtTime(180, now);
+    cg.gain.setValueAtTime(0.0001, now);
+    cg.gain.linearRampToValueAtTime(0.16, now+0.003);
+    cg.gain.exponentialRampToValueAtTime(0.0001, now+0.06);
+    c.connect(cg); cg.connect(musicGain);
+    c.start(now); c.stop(now+0.07);
+
+    // bass pulse
+    const b = musicCtx.createOscillator();
+    const bg = musicCtx.createGain();
+    b.type="sine";
+    b.frequency.setValueAtTime(freq/2, now);
+    bg.gain.setValueAtTime(0.0001, now);
+    bg.gain.linearRampToValueAtTime(0.18, now+0.01);
+    bg.gain.exponentialRampToValueAtTime(0.0001, now+0.18);
+    b.connect(bg); bg.connect(musicGain);
+    b.start(now); b.stop(now+0.19);
+  }
+  function startMusic(){
+    if(!ensureMusic()) return;
+    musicOn=true;
+    $("btnMusic").textContent="🎵 إيقاف الموسيقى";
+    if(musicTimer) clearInterval(musicTimer);
+    musicTick();
+    musicTimer=setInterval(musicTick, 320);
+  }
+  function stopMusic(){
+    musicOn=false;
+    $("btnMusic").textContent="🎵 موسيقى";
+    if(musicTimer){clearInterval(musicTimer); musicTimer=null;}
+  }
+  function toggleMusic(){
+    // this counts as user gesture
+    if(!musicOn) startMusic(); else stopMusic();
+  }
+
+  // ========= Game =========
+  function buildRound(){
+    const pool = POOL[level] || [];
+    const selected = shuffle(pool).slice(0, Q_PER_ROUND);
+    // Shuffle options per question so correct isn't always first
+    round = selected.map(q=>({q:q.q, a:q.a, opts: shuffle(q.opts)}));
+    idx=0; score=0; locked=false;
+    updatePills();
+  }
+
+  function loadQuestion(){
+    locked=false;
+    updatePills();
+    $("note").textContent="";
+    $("progress").textContent = (idx+1);
+    const q = round[idx];
+    $("question").textContent = q.q;
+
+    const wrap = $("options");
+    wrap.innerHTML="";
+    q.opts.forEach(opt=>{
+      const b=document.createElement("button");
+      b.className="opt";
+      b.textContent=opt;
+      b.addEventListener("click", ()=>choose(opt,b));
+      wrap.appendChild(b);
+    });
+    startTimer();
+  }
+
+  function choose(opt, btn){
+    if(locked) return;
+    locked=true;
+    stopTimer();
+    const q=round[idx];
+    const all=[...$("options").children];
+    if(opt===q.a){
+      score++;
+      btn.classList.add("correct");
+      beep("ok");
+      $("note").textContent="✅ صحيح!";
+      updatePills();
+      setTimeout(next, 650);
+    } else {
+      btn.classList.add("wrong");
+      all.forEach(x=>{ if(x.textContent===q.a) x.classList.add("correct"); });
+      beep("bad");
+      $("note").textContent="❌ خطأ. الإجابة الصحيحة: " + q.a;
+      setTimeout(next, 950);
+    }
+  }
+
+  function next(){
+    idx++;
+    if(idx<Q_PER_ROUND) loadQuestion();
+    else finish();
+  }
+
+  function finish(){
+    stopTimer();
+    show("screenResult");
+    stopMusic();
+    $("finalScore").textContent=score;
+    if(score>=16){
+      $("finalTitle").textContent="ممتاز! 🎉";
+      beep("win");
+      confettiBurst();
+    } else if(score < 10) {
+      $("finalTitle").textContent="للأسف راسب 😔 — قوّي معلوماتك";
+    } else {
+      $("finalTitle").textContent="انتهت المسابقة!";
+    }
+saveScore();
+    renderLeaderboard();
+    updatePills();
+  }
+
+  // ========= Leaderboard =========
+  function key(){ return "ramadan_scores_" + level; }
+  function saveScore(){
+    try{
+      const k=key();
+      const list = JSON.parse(localStorage.getItem(k) || "[]");
+      list.push({score:score, at:new Date().toISOString()});
+      list.sort((a,b)=>b.score-a.score);
+      localStorage.setItem(k, JSON.stringify(list.slice(0,10)));
+    }catch(e){}
+  }
+  function renderLeaderboard(){
+    const lb=$("lbList");
+    lb.innerHTML="";
+    if(!level){ lb.innerHTML="<li>اختر مستوى لعرض النتائج.</li>"; return; }
+    let list=[];
+    try{ list=JSON.parse(localStorage.getItem(key()) || "[]"); }catch(e){}
+    if(!list.length){ lb.innerHTML="<li>لا توجد نتائج بعد.</li>"; return; }
+    list.forEach((x,i)=>{
+      const li=document.createElement("li");
+      li.textContent = `${x.score}/20 — ${labelLevel(level)} — #${i+1}`;
+      lb.appendChild(li);
+    });
+  }
+  function clearScores(){
+    if(!level){ alert("اختر مستوى أولاً ثم امسح نتائجه."); return; }
+    try{ localStorage.removeItem(key()); }catch(e){}
+    renderLeaderboard();
+  }
+
+  // ========= Confetti =========
+  function confettiBurst(){
+    const c=$("confetti");
+    c.style.display="block";
+    const ctx=c.getContext("2d");
+    function resize(){ c.width=window.innerWidth; c.height=window.innerHeight; }
+    resize();
+    const colors=["#fbbf24","#22c55e","#60a5fa","#f472b6","#a78bfa","#34d399"];
+    const pieces=[];
+    for(let i=0;i<140;i++) pieces.push({
+      x:Math.random()*c.width,y:-20-Math.random()*c.height*0.3,
+      vx:(Math.random()*2-1)*2.4,vy:2+Math.random()*4,
+      r:2+Math.random()*5,a:Math.random()*Math.PI*2,va:(Math.random()*2-1)*0.2,
+      col:colors[i%colors.length]
+    });
+    let t=0;
+    const id=setInterval(()=>{
+      t++;
+      ctx.clearRect(0,0,c.width,c.height);
+      pieces.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.a+=p.va; p.vy+=0.03;
+        ctx.save();
+        ctx.translate(p.x,p.y);
+        ctx.rotate(p.a);
+        ctx.fillStyle=p.col;
+        ctx.fillRect(-p.r,-p.r,p.r*2,p.r*2);
+        ctx.restore();
+      });
+      if(t>140){ clearInterval(id); c.style.display="none"; }
+    },16);
+  }
+
+  // ========= Wire UI (no inline onclick to maximize compatibility) =========
+  $("btnEasy").addEventListener("click", ()=>{ level="easy"; buildRound(); show("screenQuiz"); loadQuestion(); renderLeaderboard(); });
+  $("btnMed").addEventListener("click", ()=>{ level="medium"; buildRound(); show("screenQuiz"); loadQuestion(); renderLeaderboard(); });
+  $("btnHard").addEventListener("click", ()=>{ level="hard"; buildRound(); show("screenQuiz"); loadQuestion(); renderLeaderboard(); });
+
+  $("btnSkip").addEventListener("click", ()=>{ if(locked) return; locked=true; stopTimer(); $("note").textContent="⏭️ تم التخطي. الإجابة الصحيحة: " + round[idx].a; setTimeout(next, 900); });
+  $("btnRestart").addEventListener("click", ()=>{ if(!level) return; buildRound(); loadQuestion(); });
+
+  $("btnNewQ").addEventListener("click", ()=>{ if(!level) return; buildRound(); show("screenQuiz"); loadQuestion(); });
+  $("btnBack").addEventListener("click", ()=>{ stopTimer(); stopMusic(); show("screenLevel"); updatePills(); });
+
+  $("btnClearScores").addEventListener("click", clearScores);
+  $("btnTest").addEventListener("click", testSounds);
+  $("btnMusic").addEventListener("click", toggleMusic);
+  $("musicVol").addEventListener("input", ()=>{ if(musicGain) musicGain.gain.value=parseFloat($("musicVol").value); });
+
+  renderLeaderboard();
+  updatePills();
+})();
+</script>
+</body>
+</html>
